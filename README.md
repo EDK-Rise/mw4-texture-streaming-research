@@ -1,0 +1,94 @@
+# MW4 Texture Streaming Toolkit
+
+Beta 0.1.0 · Windows · Python 3.10+ (standard library only)
+
+I started this because the Modern Warfare campaign on my PC looked blurry no matter what I did in the graphics menu. Walls and character gear sat on the lowest
+texture tier even with every setting maxed out. The game is supposed to download higher-resolution texture pieces from a CDN while you play, and on my machine
+it never did. This repository is what came out of tracking that down: a short explanation of the bug, and a set of small tools that work around it.
+
+> **Please read this first.** This is research / proof-of-concept code. The repository contains **source code and written notes only**: no Activision files, game
+> assets, game binaries, CDN content, keys or chunk catalogues, and none will ever be shared here. Please don't attach any to issues or pull requests.
+> The tools only read files from your own installation and only request public, unauthenticated URLs that the game itself requests. They don't patch, hook or read
+> the memory of the game, its launcher, drivers or anti-cheat, and they don't get around any licensing, DRM or login. I wrote them for offline, single-player use on
+> my own computer.
+> Using them is your decision and your responsibility. Downloading game content in bulk, editing your hosts file and routing the game through a local proxy may go
+> against the game's terms of service, or the law where you live. This project is not affiliated with or endorsed by Activision. "Call of Duty" and "Modern
+> Warfare" are trademarks of their owners and appear here only to say what the tools are for. No warranty (see [LICENSE](LICENSE) and [DISCLAIMER.md](DISCLAIMER.md)).
+
+## What was wrong
+
+On a PC whose internet connection has no IPv6, the game's texture streamer looks up the CDN host name (`cod-assets.cdn.callofduty.com`) and only accepts an IPv6
+answer. Windows hands it an IPv4 address wrapped as IPv6 (`::ffff:a.b.c.d`), and then refuses to open a socket to that address, so the game never sends a single
+packet. Nothing in the UI tells you. The cache folder just stays empty and you play on the shipped low-resolution textures.
+
+Pointing the CDN host name at the loopback address in the hosts file and running a small local proxy that forwards the requests over IPv4 is enough to make the
+unmodified game start streaming. The whole story, with the captures that show it, is in [docs/ISSUE-ipv6-cdn-lookup.md](docs/ISSUE-ipv6-cdn-lookup.md) and
+[docs/FINDINGS.md](docs/FINDINGS.md).
+
+## What the toolkit does
+
+- **Hosts manager** (`tools/ccshosts.py`): adds and removes the override in a clearly marked block, makes a backup before every change, reads the file back to check
+  it, and rolls back if something is off. Only this step needs administrator rights.
+- **Proxy** (`tools/ccsproxy.py`): listens on loopback, forwards chunk requests to the CDN, or serves them from a local mirror. It can also refuse chunks above a size
+  you choose.
+- **Mirror** (`tools/ccsmirror.py`): downloads the chunks once, checks each one (size and MD5 against the server's ETag), and can be paused and resumed. You can
+  limit bandwidth, set a daily quota, pick a detail level, and it waits patiently if your connection drops. Defaults are deliberately gentle (4 connections, 50
+  requests per second, a User-Agent that names the tool, back-off on HTTP 429/503).
+- **Control window** (`tools/ccsgui.py`, started with `tools\ccs-gui.bat`): one place for all of the above, plus a doctor that checks your setup, live
+  statistics, and a report for every game session (what the game asked for, how fast, how much was already in its cache).
+- **Texture pack tab**: choose what to mirror (campaign only, everything, or specific packages) and how large chunks may be. See
+  [docs/TEXTURE-PACK.md](docs/TEXTURE-PACK.md).
+
+The proxy and mirror never touch the game process. Details of how the pieces fit together are in [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md).
+
+## Trying it
+
+You need a PC install of the game, Python 3.10 or newer with tkinter (the normal python.org installer has it), and a few GiB of free disk space at the very least.
+The full campaign set is around 82 GiB; a smaller "standard" level is about 54 GiB.
+
+```
+git clone https://github.com/voidfnc/mw4-texture-streaming-research
+cd mw4-texture-streaming-research
+python tools\ccsgui.py
+```
+
+On first start the window asks where your game folder is. Nothing is assumed, and the settings live in `tools\work\gui_settings.json`. Then use *Start session*,
+launch the game, and watch the Dashboard. [docs/USAGE.md](docs/USAGE.md) walks through each tab, and the command-line versions of everything are listed there too.
+To undo the hosts change at any time run `tools\restore-hosts.bat`.
+
+The tests don't need the game: `python -m unittest discover -s tools/tests` (89 tests, about a minute and a half).
+
+## What I know and what I don't
+
+What I'm confident about: the transport bug exists on my machine and the fix works, meaning the game connects, requests chunks, gets them, and writes them into its
+own cache. In my longest session that was about 16,000 requests and 11 GiB, all answered, no errors.
+
+What I'm less sure about:
+
+- Whether the picture got better is partly my own eyes. Cutscenes looked much sharper to me afterwards, but I never ran a controlled before/after comparison.
+- The detail-level cap (refusing large chunks) works at the proxy, but I only have a handful of observations of how the engine reacts to the refusal.
+- The game asks again for many chunks that are already in its cache (roughly half of the ids in one session). I don't know why.
+- Everything was developed and tested on one Windows PC and the single-player campaign. Multiplayer and online services were not used and shouldn't be.
+
+## Bulk downloads: what you are agreeing to
+
+The mirror can fetch the whole campaign set (about 82 GiB) or every package (about 111 GiB) from the publisher's servers. I kept that feature because it is the
+practical way to use the fix on a slow connection: download once, then play offline from disk. It also means you are copying someone else's game content in bulk, so
+before the first run the GUI (and the command line, with `--accept-notice`) shows a notice that you have to accept once per version. In short: the content belongs to
+the publisher, use it only with your own copy of the game, keep it on your PC, never share or re-host it, and check that bulk downloading is allowed where you live and
+under the game's terms. If you aren't comfortable with that, use only the hosts manager and the proxy without a mirror (profile *Capture*): they fix the lookup problem
+without downloading anything in advance.
+
+## Being a good citizen
+
+The mirror can pull a lot of data from someone else's servers. Please download once and then play offline from the mirror, keep the default limits unless you have
+a reason, and don't host or share what you download. If the CDN ever asks the tool to slow down, it will.
+
+## Contributing and issues
+
+Bug reports and ideas are welcome ([CONTRIBUTING.md](CONTRIBUTING.md)). Please never attach game files, chunk lists or captures that contain them. Security-related
+reports: see [SECURITY.md](SECURITY.md).
+
+## License
+
+MIT for the code in this repository. See [LICENSE](LICENSE). It covers my code and notes only and gives no rights to any game, asset or trademark.
