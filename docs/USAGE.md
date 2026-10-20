@@ -1,7 +1,8 @@
 # Using the control window
 
 Start it with `tools\ccs-gui.bat` (no console window) or `python tools\ccsgui.py`. It runs **unelevated**; only changes to the hosts file ask for administrator
-rights (UAC). Python 3.10+ with tkinter is the only requirement. The first time it opens it shows a short notice about what the tools are and are not.
+rights (UAC). Python 3.10+ with tkinter is the only requirement. The first time it opens it shows a short notice about what the tools are and are not. Before the first bulk download (Texture pack or Mirror tab) it shows a second notice
+that you have to accept once per version; on the command line the same thing is `ccsmirror.py run ... --accept-notice`.
 
 ## First run: tell it where things are (Game tab)
 
@@ -40,7 +41,7 @@ Nothing is assumed. Until the game folder is set, the Dashboard shows a red *SET
 
 - **Dashboard**: live counters, throughput graph, activity log.
 - **Proxy**: options (tier cap, budget, retries, port, mirror first, offline), restart, request-size histogram, recent requests.
-- **Texture pack**: scope, detail level, estimate, bandwidth cap, daily limit, download / pause, verify, reclaim space. See [TEXTURE-PACK.md](TEXTURE-PACK.md).
+- **Texture pack**: (asks you to accept the bulk-download notice the first time) scope, detail level, estimate, bandwidth cap, daily limit, download / pause, verify, reclaim space. See [TEXTURE-PACK.md](TEXTURE-PACK.md).
 - **Mirror**: the expert view of the same downloader (run, pause, kill, verify, retry failed, re-init lists, progress with ETA, chunks by priority).
 - **Cache**: shard table of the engine cache, duplicate ratio, backup and restore (the current cache is renamed aside, never deleted). Writes are refused while the
   game runs.
