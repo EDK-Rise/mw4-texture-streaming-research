@@ -1,6 +1,6 @@
 # MW4 Texture Streaming Toolkit
 
-Beta 0.1.0 · Windows · Python 3.10+ (standard library only)
+Beta 0.1.1 · Windows · Python 3.10+ (standard library only)
 
 I started this because the Modern Warfare campaign on my PC looked blurry no matter what I did in the graphics menu. Walls and character gear sat on the lowest
 texture tier even with every setting maxed out. The game is supposed to download higher-resolution texture pieces from a CDN while you play, and on my machine
@@ -56,7 +56,22 @@ On first start the window asks where your game folder is. Nothing is assumed, an
 launch the game, and watch the Dashboard. [docs/USAGE.md](docs/USAGE.md) walks through each tab, and the command-line versions of everything are listed there too.
 To undo the hosts change at any time run `tools\restore-hosts.bat`.
 
-The tests don't need the game: `python -m unittest discover -s tools/tests` (89 tests, about a minute and a half).
+The tests don't need the game: `python -m unittest discover -s tools/tests` (91 tests, about a minute and a half).
+
+## If something doesn't work
+
+Most problems show up in the *Doctor* tab, which tells you what is wrong and offers a fix. Two I have seen from real users:
+
+**"Permission denied" when the hosts file is written.** Windows protects that file on purpose, and a write can be refused even when the window says it runs as
+administrator. The usual causes are the read-only attribute on the file (run `attrib -r "%SystemRoot%\System32\drivers\etc\hosts"` in an admin Command Prompt) or
+security software with hosts-file protection (pause it briefly or allow `python.exe`, apply the override, turn it back on). A refused write leaves the file
+untouched, and the message says so. I don't turn off anyone's security software and I don't change permissions on system files for you; that is your call. If you
+would rather not let the tool write the file at all, you can add the two lines yourself (`python tools\ccshosts.py diff apply` shows them).
+
+**"'NoneType' object has no attribute 'splitlines'" when starting a session.** That was a bug on Windows installs with a non-English language, fixed in 0.1.1.
+Update to the latest version. If you still see it, open an issue with the support bundle from the Doctor tab (check its contents first).
+
+More in [docs/USAGE.md](docs/USAGE.md#troubleshooting). To put your hosts file back to how it was, run `toolsestore-hosts.bat`.
 
 ## What I know and what I don't
 
